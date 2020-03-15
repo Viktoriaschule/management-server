@@ -1,0 +1,10 @@
+relution:
+  host: example.com
+  token: mysupersecrettoken
+mysql:
+  host: example.com
+  port: 3306
+  user: myuser
+  password: mypassword
+  name: mydatabasename
+port: 9000
