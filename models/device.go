@@ -7,13 +7,13 @@ import (
 )
 
 type GeneralDevice struct {
-	Id               string  `json:"id"`
-	Name             string  `json:"name"`
-	LoggedinUser     string  `json:"loggedin_user"`
-	DeviceType       int64   `json:"device_type"`
-	BatteryLevel     float64 `json:"battery_level"`
-	DeviceGroup      int64   `json:"device_group"`
-	DeviceGroupIndex string  `json:"device_group_index"`
+	Id               string `json:"id"`
+	Name             string `json:"name"`
+	LoggedinUser     string `json:"loggedin_user"`
+	DeviceType       int64  `json:"device_type"`
+	BatteryLevel     int64  `json:"battery_level"`
+	DeviceGroup      int64  `json:"device_group"`
+	DeviceGroupIndex string `json:"device_group_index"`
 }
 
 type RelutionDevice struct {
@@ -210,7 +210,7 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 		Name:             strings.ToLower(device.Name),
 		LoggedinUser:     username,
 		DeviceType:       deviceType,
-		BatteryLevel:     device.Details.BatteryLevel,
+		BatteryLevel:     int64(device.Details.BatteryLevel * 100),
 		DeviceGroup:      group,
 		DeviceGroupIndex: groupIndex,
 	}, nil
