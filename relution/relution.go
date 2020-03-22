@@ -3,10 +3,11 @@ package relution
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/viktoriaschule/management-server/charging"
+	"github.com/viktoriaschule/management-server/helper"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/viktoriaschule/management-server/config"
@@ -58,7 +59,7 @@ func (r *Relution) FetchDevices() {
 		log.Errorf("Error parsing json: %v", err)
 		os.Exit(1)
 	}
-	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, device_group = ?, device_group_index = ?")
+	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, is_charging = ?, device_group = ?, device_group_index = ?")
 	if err != nil {
 		log.Errorf("Error preparing insert statement: %v", err)
 		os.Exit(1)
@@ -79,8 +80,10 @@ func (r *Relution) FetchDevices() {
 		oldDevices[device.Id] = device
 	}
 
-	var batteryEntries []string
 	changedCount := 0
+
+	// Start charging sync
+	charging.StartSync(r.database)
 
 	for _, rDevice := range devicesResponse.Results {
 		// Get the device
@@ -92,13 +95,13 @@ func (r *Relution) FetchDevices() {
 
 		// Add the battery entry if changed
 		oldDevice, isOld := oldDevices[gDevice.Id]
-		if !isOld || gDevice.BatteryLevel != oldDevice.BatteryLevel {
-			batteryEntries = append(batteryEntries, getBatteryEntry(gDevice))
-		}
+
+		// Sync the charging mode for the device
+		charging.SyncDevice(gDevice, &oldDevice, !isOld)
 
 		// Add or change device entry
 		if !isOld || models.HasDeviceChanged(gDevice, &oldDevice) {
-			_, err = stmtIns.Exec(gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.DeviceGroup, gDevice.DeviceGroupIndex, gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.DeviceGroup, gDevice.DeviceGroupIndex)
+			_, err = stmtIns.Exec(gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex, gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex)
 			if err != nil {
 				log.Warnf("Error executing insert statement: %v", err)
 			}
@@ -107,10 +110,7 @@ func (r *Relution) FetchDevices() {
 	}
 	log.Infof("Fetched devices (%d have changed)", changedCount)
 
-	if len(batteryEntries) > 0 {
-		addBatteryEntries(r.database, &batteryEntries)
-	}
-	removeOldBatteryEntries(r.database)
+	charging.EndSync(r.database)
 }
 
 func GetValidLoadedDevices(database *database.Database) (devices *[]models.GeneralDevice, err error) {
@@ -118,9 +118,9 @@ func GetValidLoadedDevices(database *database.Database) (devices *[]models.Gener
 }
 
 func getLoadedDevices(database *database.Database, filter string) (devices *[]models.GeneralDevice, err error) {
-	rows, _err := database.DB.Query("SELECT * FROM devices" + filter)
+	rows, _err := database.DB.Query("SELECT * FROM devices" + " " + filter)
 	if _err != nil {
-		err = &loadError{fmt.Sprintf("Database query failed %v", _err)}
+		err = &helper.LoadError{Msg: fmt.Sprintf("Database query failed %v", _err)}
 		return nil, err
 	}
 	var _devices []models.GeneralDevice
@@ -128,47 +128,19 @@ func getLoadedDevices(database *database.Database, filter string) (devices *[]mo
 	//noinspection GoUnhandledErrorResult
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.DeviceGroup, &device.DeviceGroupIndex)
+		err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.IsCharging, &device.DeviceGroup, &device.DeviceGroupIndex)
 		if err != nil {
-			err = &loadError{"Database query failed"}
+			err = &helper.LoadError{Msg: "Database query failed"}
 			return nil, err
 		}
 		_devices = append(_devices, *device)
 	}
 	err = rows.Err()
 	if err != nil {
-		err = &loadError{"Database query failed"}
+		err = &helper.LoadError{Msg: "Database query failed"}
 		return nil, err
 	}
 	devices = &_devices
 
 	return devices, err
-}
-
-func getBatteryEntry(device *models.GeneralDevice) string {
-	entry := models.DeviceToBatteryLevelEntry(device)
-	return fmt.Sprintf(`("%s", "%d", "%s")`, entry.Id, entry.Level, entry.Timestamp.Format("2006-01-02 15:04:05"))
-}
-
-func addBatteryEntries(database *database.Database, entries *[]string) {
-	log.Infof("Add %d battery entries...", len(*entries))
-	_, err := database.DB.Exec("INSERT INTO battery VALUES " + strings.Join(*entries, ", "))
-
-	if err != nil {
-		log.Warnf("Error during adding a new battery level entry: %v", err)
-	}
-
-	log.Infof("Added battery entries...")
-}
-
-func removeOldBatteryEntries(database *database.Database) {
-	oldestDate := time.Now().Add(time.Hour * time.Duration(-24)).Format("2006-01-02 15:04:05")
-	log.Infof("Remove battery entries older than %s...", oldestDate)
-	_, err := database.DB.Exec("DELETE FROM battery WHERE timestamp < ?", oldestDate)
-
-	if err != nil {
-		log.Warnf("Error deleting old battery level entries: %v", err)
-	}
-
-	log.Infof("Removed old devices...")
 }

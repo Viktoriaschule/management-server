@@ -22,6 +22,7 @@ func Serve(config *config.Config, database *database.Database) {
 		devices, err := relution.GetValidLoadedDevices(database)
 		if err != nil {
 			respondWithError(500, err.Error(), c)
+			return
 		}
 		c.JSON(200, gin.H{"devices": devices})
 	})

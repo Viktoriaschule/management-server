@@ -12,6 +12,7 @@ type GeneralDevice struct {
 	LoggedinUser     string `json:"loggedin_user"`
 	DeviceType       int64  `json:"device_type"`
 	BatteryLevel     int64  `json:"battery_level"`
+	IsCharging       bool   `json:"is_charging"`
 	DeviceGroup      int64  `json:"device_group"`
 	DeviceGroupIndex string `json:"device_group_index"`
 }
@@ -213,11 +214,13 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 		BatteryLevel:     int64(device.Details.BatteryLevel * 100),
 		DeviceGroup:      group,
 		DeviceGroupIndex: groupIndex,
+		IsCharging:       false,
 	}, nil
 }
 
 func HasDeviceChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
 	return oldDevice.BatteryLevel != newDevice.BatteryLevel ||
+		oldDevice.IsCharging != newDevice.IsCharging ||
 		oldDevice.LoggedinUser != newDevice.LoggedinUser ||
 		oldDevice.DeviceGroup != newDevice.DeviceGroup ||
 		oldDevice.DeviceGroupIndex != newDevice.DeviceGroupIndex ||
