@@ -215,3 +215,12 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 		DeviceGroupIndex: groupIndex,
 	}, nil
 }
+
+func HasDeviceChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
+	return oldDevice.BatteryLevel != newDevice.BatteryLevel ||
+		oldDevice.LoggedinUser != newDevice.LoggedinUser ||
+		oldDevice.DeviceGroup != newDevice.DeviceGroup ||
+		oldDevice.DeviceGroupIndex != newDevice.DeviceGroupIndex ||
+		oldDevice.Name != newDevice.Name ||
+		oldDevice.DeviceType != newDevice.DeviceType
+}

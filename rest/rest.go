@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/viktoriaschule/management-server/relution"
 	"os"
 	"strings"
 
@@ -12,34 +13,15 @@ import (
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/log"
-	"github.com/viktoriaschule/management-server/models"
 )
 
 func Serve(config *config.Config, database *database.Database) {
 	r := gin.Default()
 	root := r.Group("/", basicAuth())
 	root.GET("/devices", func(c *gin.Context) {
-		rows, err := database.DB.Query("SELECT * FROM devices WHERE device_group != 0 OR device_type = 1")
+		devices, err := relution.GetValidLoadedDevices(database)
 		if err != nil {
-			respondWithError(500, "Database query failed", c)
-			return
-		}
-		var devices []models.GeneralDevice
-		device := &models.GeneralDevice{}
-		//noinspection GoUnhandledErrorResult
-		defer rows.Close()
-		for rows.Next() {
-			err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.DeviceGroup, &device.DeviceGroupIndex)
-			if err != nil {
-				respondWithError(500, "Database query failed", c)
-				return
-			}
-			devices = append(devices, *device)
-		}
-		err = rows.Err()
-		if err != nil {
-			respondWithError(500, "Database query failed", c)
-			return
+			respondWithError(500, err.Error(), c)
 		}
 		c.JSON(200, gin.H{"devices": devices})
 	})
