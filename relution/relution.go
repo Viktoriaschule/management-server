@@ -120,7 +120,8 @@ func GetValidLoadedDevices(database *database.Database) (devices *[]models.Gener
 func getLoadedDevices(database *database.Database, filter string) (devices *[]models.GeneralDevice, err error) {
 	rows, _err := database.DB.Query("SELECT * FROM devices" + " " + filter)
 	if _err != nil {
-		err = &helper.LoadError{Msg: fmt.Sprintf("Database query failed %v", _err)}
+		log.Errorf("Database query failed: %v", _err)
+		err = &helper.LoadError{Msg: "Database query failed "}
 		return nil, err
 	}
 	var _devices []models.GeneralDevice
@@ -130,6 +131,7 @@ func getLoadedDevices(database *database.Database, filter string) (devices *[]mo
 	for rows.Next() {
 		err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.IsCharging, &device.DeviceGroup, &device.DeviceGroupIndex)
 		if err != nil {
+			log.Errorf("Database query failed: %v", err)
 			err = &helper.LoadError{Msg: "Database query failed"}
 			return nil, err
 		}
@@ -137,6 +139,7 @@ func getLoadedDevices(database *database.Database, filter string) (devices *[]mo
 	}
 	err = rows.Err()
 	if err != nil {
+		log.Errorf("Database query failed: %v", err)
 		err = &helper.LoadError{Msg: "Database query failed"}
 		return nil, err
 	}
