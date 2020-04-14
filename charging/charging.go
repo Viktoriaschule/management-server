@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Every loading different in the last half hour will be count as one loading process
+// A loading duration without any updates is max 15 minutes long
 const maxLoadingDuration = time.Minute * time.Duration(15)
 
 // The max duration to store device battery levels (7d)
@@ -26,7 +26,7 @@ func StartSync(database *database.Database) {
 	changedSqlLoadingEntries = []string{}
 
 	var err error
-	currentLoadingEntries, err = getBatteryEntries(database)
+	currentLoadingEntries, err = getBatteryEntriesInLoadingDuration(database)
 
 	if err != nil {
 		log.Errorf("Cannot load current loading entries: %v", err)
@@ -123,11 +123,60 @@ func removeOldBatteryEntries(database *database.Database) {
 }
 
 // Returns all battery entries in the last max loading duration sorted by the date
-func getBatteryEntries(database *database.Database) (entries map[string][]models.BatteryLevelEntry, err error) {
+func getBatteryEntriesInLoadingDuration(database *database.Database) (entries map[string][]models.BatteryLevelEntry, err error) {
 	oldestDate := time.Now().Add(-maxLoadingDuration).Format("2006-01-02 15:04:05")
-	rows, _err := database.DB.Query("SELECT * FROM battery WHERE timestamp >= ? ORDER BY timestamp DESC", oldestDate)
+	return getBatteryEntriesForDevicesAndTime(database, nil, &oldestDate)
+}
+
+// Returns all battery entries for the given devices
+func GetBatteryEntriesForDevices(database *database.Database, ids []string) (entries map[string][]models.BatteryLevelEntry, err error) {
+	return getBatteryEntriesForDevicesAndTime(database, &ids, nil)
+}
+
+// Returns all battery entries in the last max loading duration and with the given ids sorted by the date
+func getBatteryEntriesForDevicesAndTime(database *database.Database, ids *[]string, oldestDate *string) (entries map[string][]models.BatteryLevelEntry, err error) {
+	// Only entries newer than oldest date, if set
+	timeFilter := ""
+	if oldestDate != nil {
+		timeFilter = "timestamp >= \"" + *oldestDate + "\""
+	}
+
+	// Filter for all given ids, or when no given, return all
+	idFilter := ""
+	if ids != nil && len(*ids) > 0 {
+		idsCount := len(*ids)
+		idFilter += "("
+		for i, id := range *ids {
+			idFilter += "id = \"" + id + "\""
+			if i != idsCount-1 {
+				idFilter += "OR "
+			}
+		}
+		idFilter += ")"
+	}
+
+	filter := ""
+	if len(timeFilter) > 0 || len(idFilter) > 0 {
+		filter += "WHERE "
+
+		if len(timeFilter) > 0 {
+			filter += timeFilter
+
+			if len(idFilter) > 0 {
+				filter += " AND "
+			}
+		}
+
+		if len(idFilter) > 0 {
+			filter += idFilter
+		}
+		filter += " "
+	}
+
+	rows, _err := database.DB.Query("SELECT * FROM battery " + filter + "ORDER BY timestamp DESC")
 	if _err != nil {
-		err = &helper.LoadError{Msg: fmt.Sprintf("Database query failed %v", _err)}
+		log.Errorf("Database query failed: ", _err)
+		err = &helper.LoadError{Msg: fmt.Sprintf("Database query failed")}
 		return nil, err
 	}
 
@@ -141,6 +190,7 @@ func getBatteryEntries(database *database.Database) (entries map[string][]models
 		var timestamp mysql.NullTime
 		err := rows.Scan(&entry.Id, &entry.Level, &timestamp)
 		if err != nil {
+			log.Errorf("Database query failed: ", err)
 			err = &helper.LoadError{Msg: "Database query failed"}
 			return nil, err
 		}
@@ -160,6 +210,7 @@ func getBatteryEntries(database *database.Database) (entries map[string][]models
 	}
 	err = rows.Err()
 	if err != nil {
+		log.Errorf("Database query failed: ", err)
 		err = &helper.LoadError{Msg: "Database query failed"}
 		return nil, err
 	}

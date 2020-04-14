@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/relution"
 	"os"
 	"strings"
@@ -18,14 +19,10 @@ import (
 func Serve(config *config.Config, database *database.Database) {
 	r := gin.Default()
 	root := r.Group("/", basicAuth())
-	root.GET("/devices", func(c *gin.Context) {
-		devices, err := relution.GetValidLoadedDevices(database)
-		if err != nil {
-			respondWithError(500, err.Error(), c)
-			return
-		}
-		c.JSON(200, gin.H{"devices": devices})
-	})
+
+	relution.Serve(root, database)
+	charging.Serve(root, database)
+
 	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		log.Errorf("Error serving API: %v", err)
