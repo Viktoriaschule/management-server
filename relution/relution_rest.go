@@ -6,7 +6,7 @@ import (
 )
 
 func Serve(root *gin.RouterGroup, database *database.Database) {
-	root.GET("/devices", func(c *gin.Context) {
+	root.GET("/ipad_list", func(c *gin.Context) {
 		devices, err := GetValidLoadedDevices(database)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
