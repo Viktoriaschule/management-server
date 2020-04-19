@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/viktoriaschule/management-server/config"
 	"net/http"
 	"os"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/viktoriaschule/management-server/log"
 )
 
-func CheckUser(username, password string) (bool, error) {
+func CheckUser(username, password string, config *config.Config) (bool, error) {
 	client := &http.Client{}
-	request, err := http.NewRequest("GET", "https://api.app.vs-ac.de/login", nil)
+	request, err := http.NewRequest("GET", config.Ldap.Url, nil)
 	if err != nil {
 		return false, err
 	}

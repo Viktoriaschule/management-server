@@ -18,7 +18,7 @@ import (
 
 func Serve(config *config.Config, database *database.Database) {
 	r := gin.Default()
-	root := r.Group("/", basicAuth())
+	root := r.Group("/", basicAuth(config))
 
 	relution.Serve(root, database)
 	charging.Serve(root, database)
@@ -30,7 +30,7 @@ func Serve(config *config.Config, database *database.Database) {
 	}
 }
 
-func basicAuth() gin.HandlerFunc {
+func basicAuth(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 
@@ -42,7 +42,7 @@ func basicAuth() gin.HandlerFunc {
 		payload, _ := base64.StdEncoding.DecodeString(auth[1])
 		pair := strings.SplitN(string(payload), ":", 2)
 
-		if len(pair) != 2 || !authenticateUser(pair[0], pair[1]) {
+		if len(pair) != 2 || !authenticateUser(pair[0], pair[1], config) {
 			c.Writer.Header().Set("WWW-Authenticate", "Basic")
 			respondWithError(401, "Unauthorized", c)
 			return
@@ -52,8 +52,8 @@ func basicAuth() gin.HandlerFunc {
 	}
 }
 
-func authenticateUser(username, password string) bool {
-	result, err := auth.CheckUser(username, password)
+func authenticateUser(username, password string, config *config.Config) bool {
+	result, err := auth.CheckUser(username, password, config)
 	if err != nil {
 		log.Errorf("%v", err)
 	}

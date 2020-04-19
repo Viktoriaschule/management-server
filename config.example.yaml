@@ -7,4 +7,6 @@ mysql:
   user: myuser
   password: mypassword
   name: mydatabasename
+ldap:
+  url: https://example.com/path/to/login
 port: 9000

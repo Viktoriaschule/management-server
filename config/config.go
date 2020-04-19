@@ -21,6 +21,9 @@ type Config struct {
 		Password string
 		Name     string
 	}
+	Ldap struct {
+		Url string
+	}
 	Port int
 }
 
