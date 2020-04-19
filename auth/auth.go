@@ -14,7 +14,7 @@ import (
 
 func CheckUser(username, password string) (bool, error) {
 	client := &http.Client{}
-	request, err := http.NewRequest("GET", "https://ldap.vs-ac.de/login", nil)
+	request, err := http.NewRequest("GET", "https://api.app.vs-ac.de/login", nil)
 	if err != nil {
 		return false, err
 	}
