@@ -4,12 +4,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/viktoriaschule/management-server/config"
 	"net/http"
 	"os"
 
 	"github.com/pkg/errors"
 
+	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/log"
 )
 

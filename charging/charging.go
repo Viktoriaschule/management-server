@@ -2,20 +2,22 @@ package charging
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/go-sql-driver/mysql"
+
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/helper"
 	"github.com/viktoriaschule/management-server/log"
 	"github.com/viktoriaschule/management-server/models"
-	"strings"
-	"time"
 )
 
 // A loading duration without any updates is max 15 minutes long
-const maxLoadingDuration = time.Minute * time.Duration(15)
+const maxLoadingDuration = time.Minute * 15
 
 // The max duration to store device battery levels (30d)
-const maxStoreDuration = time.Hour * time.Duration(24) * 30
+const maxStoreDuration = time.Hour * 24 * 30
 
 // All the charging management
 var changedSqlLoadingEntries []string

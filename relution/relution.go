@@ -3,15 +3,15 @@ package relution
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/viktoriaschule/management-server/charging"
-	"github.com/viktoriaschule/management-server/helper"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
+	"github.com/viktoriaschule/management-server/helper"
 	"github.com/viktoriaschule/management-server/log"
 	"github.com/viktoriaschule/management-server/models"
 )

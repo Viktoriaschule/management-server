@@ -3,17 +3,17 @@ package rest
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/viktoriaschule/management-server/charging"
-	"github.com/viktoriaschule/management-server/relution"
 	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/viktoriaschule/management-server/auth"
+	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/log"
+	"github.com/viktoriaschule/management-server/relution"
 )
 
 func Serve(config *config.Config, database *database.Database) {
