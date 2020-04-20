@@ -18,3 +18,11 @@ func Schedule(what func(), delay time.Duration) chan bool {
 
 	return stop
 }
+
+func (e *LoadError) Error() string {
+	return e.Msg
+}
+
+type LoadError struct {
+	Msg string
+}

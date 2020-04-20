@@ -9,40 +9,20 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/viktoriaschule/management-server/auth"
+	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/log"
-	"github.com/viktoriaschule/management-server/models"
+	"github.com/viktoriaschule/management-server/relution"
 )
 
 func Serve(config *config.Config, database *database.Database) {
 	r := gin.Default()
-	root := r.Group("/", basicAuth())
-	root.GET("/devices", func(c *gin.Context) {
-		rows, err := database.DB.Query("SELECT * FROM devices WHERE device_group != 0 OR device_type = 1")
-		if err != nil {
-			respondWithError(500, "Database query failed", c)
-			return
-		}
-		var devices []models.GeneralDevice
-		device := &models.GeneralDevice{}
-		//noinspection GoUnhandledErrorResult
-		defer rows.Close()
-		for rows.Next() {
-			err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.DeviceGroup, &device.DeviceGroupIndex)
-			if err != nil {
-				respondWithError(500, "Database query failed", c)
-				return
-			}
-			devices = append(devices, *device)
-		}
-		err = rows.Err()
-		if err != nil {
-			respondWithError(500, "Database query failed", c)
-			return
-		}
-		c.JSON(200, gin.H{"devices": devices})
-	})
+	root := r.Group("/", basicAuth(config))
+
+	relution.Serve(root, database)
+	charging.Serve(root, database)
+
 	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		log.Errorf("Error serving API: %v", err)
@@ -50,7 +30,7 @@ func Serve(config *config.Config, database *database.Database) {
 	}
 }
 
-func basicAuth() gin.HandlerFunc {
+func basicAuth(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 
@@ -62,7 +42,7 @@ func basicAuth() gin.HandlerFunc {
 		payload, _ := base64.StdEncoding.DecodeString(auth[1])
 		pair := strings.SplitN(string(payload), ":", 2)
 
-		if len(pair) != 2 || !authenticateUser(pair[0], pair[1]) {
+		if len(pair) != 2 || !authenticateUser(pair[0], pair[1], config) {
 			c.Writer.Header().Set("WWW-Authenticate", "Basic")
 			respondWithError(401, "Unauthorized", c)
 			return
@@ -72,8 +52,8 @@ func basicAuth() gin.HandlerFunc {
 	}
 }
 
-func authenticateUser(username, password string) bool {
-	result, err := auth.CheckUser(username, password)
+func authenticateUser(username, password string, config *config.Config) bool {
+	result, err := auth.CheckUser(username, password, config)
 	if err != nil {
 		log.Errorf("%v", err)
 	}

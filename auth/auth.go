@@ -9,12 +9,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/log"
 )
 
-func CheckUser(username, password string) (bool, error) {
+func CheckUser(username, password string, config *config.Config) (bool, error) {
 	client := &http.Client{}
-	request, err := http.NewRequest("GET", "https://ldap.vs-ac.de/login", nil)
+	request, err := http.NewRequest("GET", config.Ldap.Url, nil)
 	if err != nil {
 		return false, err
 	}

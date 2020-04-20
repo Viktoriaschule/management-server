@@ -8,8 +8,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
+	"github.com/viktoriaschule/management-server/helper"
 	"github.com/viktoriaschule/management-server/log"
 	"github.com/viktoriaschule/management-server/models"
 )
@@ -57,7 +59,7 @@ func (r *Relution) FetchDevices() {
 		log.Errorf("Error parsing json: %v", err)
 		os.Exit(1)
 	}
-	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, device_group = ?, device_group_index = ?")
+	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, is_charging = ?, device_group = ?, device_group_index = ?")
 	if err != nil {
 		log.Errorf("Error preparing insert statement: %v", err)
 		os.Exit(1)
@@ -65,16 +67,83 @@ func (r *Relution) FetchDevices() {
 	//noinspection GoUnhandledErrorResult
 	defer stmtIns.Close()
 
+	// Get all current devices
+	_oldDevices, err := getLoadedDevices(r.database, "")
+	if err != nil {
+		log.Errorf("Error fetching old devices: %v", err)
+		os.Exit(1)
+	}
+
+	// Convert devices list to map
+	oldDevices := make(map[string]models.GeneralDevice)
+	for _, device := range *_oldDevices {
+		oldDevices[device.Id] = device
+	}
+
+	changedCount := 0
+
+	// Start charging sync
+	charging.StartSync(r.database)
+
 	for _, rDevice := range devicesResponse.Results {
+		// Get the device
 		gDevice, err := models.RelutionDeviceToGeneralDevice(rDevice)
 		if err != nil {
 			log.Warnf("Error converting relution device to general device: %v", err)
 			continue
 		}
-		_, err = stmtIns.Exec(gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.DeviceGroup, gDevice.DeviceGroupIndex, gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.DeviceGroup, gDevice.DeviceGroupIndex)
-		if err != nil {
-			log.Warnf("Error executing insert statement: %v", err)
+
+		// Add the battery entry if changed
+		oldDevice, isOld := oldDevices[gDevice.Id]
+
+		// Sync the charging mode for the device
+		charging.SyncDevice(gDevice, &oldDevice, !isOld)
+
+		// Add or change device entry
+		if !isOld || models.HasDeviceChanged(gDevice, &oldDevice) {
+			_, err = stmtIns.Exec(gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex, gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex)
+			if err != nil {
+				log.Warnf("Error executing insert statement: %v", err)
+			}
+			changedCount++
 		}
 	}
-	log.Infof("Fetched devices...")
+	log.Infof("Fetched devices (%d have changed)", changedCount)
+
+	charging.EndSync(r.database)
+}
+
+func GetValidLoadedDevices(database *database.Database) (devices *[]models.GeneralDevice, err error) {
+	return getLoadedDevices(database, "WHERE device_group != 0 OR device_type = 1")
+}
+
+func getLoadedDevices(database *database.Database, filter string) (devices *[]models.GeneralDevice, err error) {
+	rows, _err := database.DB.Query("SELECT * FROM devices" + " " + filter)
+	if _err != nil {
+		log.Errorf("Database query failed: %v", _err)
+		err = &helper.LoadError{Msg: "Database query failed "}
+		return nil, err
+	}
+	var _devices []models.GeneralDevice
+	device := &models.GeneralDevice{}
+	//noinspection GoUnhandledErrorResult
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.IsCharging, &device.DeviceGroup, &device.DeviceGroupIndex)
+		if err != nil {
+			log.Errorf("Database query failed: %v", err)
+			err = &helper.LoadError{Msg: "Database query failed"}
+			return nil, err
+		}
+		_devices = append(_devices, *device)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Errorf("Database query failed: %v", err)
+		err = &helper.LoadError{Msg: "Database query failed"}
+		return nil, err
+	}
+	devices = &_devices
+
+	return devices, err
 }
