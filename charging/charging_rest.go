@@ -10,7 +10,7 @@ func Serve(root *gin.RouterGroup, database *database.Database) {
 		request := BatteriesRequest{}
 
 		if err := c.ShouldBindJSON(&request); err == nil {
-			entries, err := GetBatteryEntriesForDevices(database, request.Ids)
+			entries, err := GetBatteryEntriesForDevices(database, request.Ids, request.Date)
 			if err != nil {
 				c.JSON(500, gin.H{"error": err.Error()})
 				return

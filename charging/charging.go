@@ -14,8 +14,8 @@ import (
 // A loading duration without any updates is max 15 minutes long
 const maxLoadingDuration = time.Minute * time.Duration(15)
 
-// The max duration to store device battery levels (7d)
-const maxStoreDuration = time.Hour * time.Duration(24) * 7
+// The max duration to store device battery levels (30d)
+const maxStoreDuration = time.Hour * time.Duration(24) * 30
 
 // All the charging management
 var changedSqlLoadingEntries []string
@@ -129,8 +129,9 @@ func getBatteryEntriesInLoadingDuration(database *database.Database) (entries ma
 }
 
 // Returns all battery entries for the given devices
-func GetBatteryEntriesForDevices(database *database.Database, ids []string) (entries map[string][]models.BatteryLevelEntry, err error) {
-	return getBatteryEntriesForDevicesAndTime(database, &ids, nil)
+func GetBatteryEntriesForDevices(database *database.Database, ids []string, date time.Time) (entries map[string][]models.BatteryLevelEntry, err error) {
+	oldestDate := date.Format("2006-01-02 15:04:05")
+	return getBatteryEntriesForDevicesAndTime(database, &ids, &oldestDate)
 }
 
 // Returns all battery entries in the last max loading duration and with the given ids sorted by the date
