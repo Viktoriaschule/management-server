@@ -17,7 +17,12 @@ import (
 )
 
 func Serve(config *config.Config, database *database.Database) {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	if log.Level >= log.Debug {
+		r.Use(gin.Logger())
+	}
+
 	root := r.Group("/", basicAuth(config))
 
 	relution.Serve(root, database)

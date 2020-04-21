@@ -10,3 +10,4 @@ mysql:
 ldap:
   url: https://example.com/path/to/login
 port: 9000
+loglevel: debug / info / warn / error
