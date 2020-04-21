@@ -102,7 +102,8 @@ func (r *Relution) FetchDevices() {
 		history.SyncDevice(gDevice, &oldDevice, !isOld)
 
 		// Add or change device entry
-		if !isOld || models.TimesIsAfter(gDevice.LastModified, oldDevice.LastModified) {
+		datesAreEquals := models.CompareTimes(gDevice.LastModified, oldDevice.LastModified)
+		if !isOld || models.TimesIsAfter(gDevice.LastModified, oldDevice.LastModified) || (datesAreEquals && gDevice.IsCharging != oldDevice.IsCharging) {
 			oldDevices[gDevice.Id] = *gDevice
 			_, err = stmtIns.Exec(
 				gDevice.Id,
@@ -132,7 +133,7 @@ func (r *Relution) FetchDevices() {
 				log.Warnf("Error executing insert statement: %v", err)
 			}
 			changedCount++
-		} else if isOld && models.CompareTimes(gDevice.LastModified, oldDevice.LastModified) && models.HasDeviceChanged(gDevice, &oldDevice) {
+		} else if isOld && datesAreEquals && models.HasDeviceChanged(gDevice, &oldDevice) {
 			log.Warnf("Device has changed, but not the last modified")
 		}
 	}
