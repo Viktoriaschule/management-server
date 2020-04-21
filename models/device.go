@@ -238,6 +238,10 @@ func HasObjectChanged(o1 interface{}, o2 interface{}) bool {
 		value1 := v1.Field(i).Interface()
 		value2 := v2.Field(i).Interface()
 
+		if v1.Type().Field(i).Name == "Timestamp" {
+			continue
+		}
+
 		// If the attribute is a date, compare the dates
 		if time1, ok := value1.(time.Time); ok {
 			time2 := value2.(time.Time)
