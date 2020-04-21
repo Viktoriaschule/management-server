@@ -1,8 +1,8 @@
-package charging
+package history
 
 import "time"
 
-type BatteriesRequest struct {
+type Request struct {
 	Ids  []string  `json:"ids"`
 	Date time.Time `json:"date"`
 }

@@ -8,10 +8,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/viktoriaschule/management-server/charging"
+	"github.com/go-sql-driver/mysql"
+
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/helper"
+	"github.com/viktoriaschule/management-server/history"
 	"github.com/viktoriaschule/management-server/log"
 	"github.com/viktoriaschule/management-server/models"
 )
@@ -59,7 +61,7 @@ func (r *Relution) FetchDevices() {
 		log.Errorf("Error parsing json: %v", err)
 		os.Exit(1)
 	}
-	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, is_charging = ?, device_group = ?, device_group_index = ?")
+	stmtIns, err := r.database.DB.Prepare("INSERT INTO devices VALUES( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE id = ?, name = ?, loggedin_user = ?, device_type = ?, battery_level = ?, is_charging = ?, device_group = ?, device_group_index = ?, last_modified = ?, last_connection = ?, status = ?")
 	if err != nil {
 		log.Errorf("Error preparing insert statement: %v", err)
 		os.Exit(1)
@@ -83,7 +85,7 @@ func (r *Relution) FetchDevices() {
 	changedCount := 0
 
 	// Start charging sync
-	charging.StartSync(r.database)
+	history.StartSync(r.database)
 
 	for _, rDevice := range devicesResponse.Results {
 		// Get the device
@@ -97,20 +99,46 @@ func (r *Relution) FetchDevices() {
 		oldDevice, isOld := oldDevices[gDevice.Id]
 
 		// Sync the charging mode for the device
-		charging.SyncDevice(gDevice, &oldDevice, !isOld)
+		history.SyncDevice(gDevice, &oldDevice, !isOld)
 
 		// Add or change device entry
-		if !isOld || models.HasDeviceChanged(gDevice, &oldDevice) {
-			_, err = stmtIns.Exec(gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex, gDevice.Id, gDevice.Name, gDevice.LoggedinUser, gDevice.DeviceType, gDevice.BatteryLevel, gDevice.IsCharging, gDevice.DeviceGroup, gDevice.DeviceGroupIndex)
+		if !isOld || models.TimesIsAfter(gDevice.LastModified, oldDevice.LastModified) {
+			oldDevices[gDevice.Id] = *gDevice
+			_, err = stmtIns.Exec(
+				gDevice.Id,
+				gDevice.Name,
+				gDevice.LoggedinUser,
+				gDevice.DeviceType,
+				gDevice.BatteryLevel,
+				gDevice.IsCharging,
+				gDevice.DeviceGroup,
+				gDevice.DeviceGroupIndex,
+				gDevice.LastModified.Format(helper.SqlDateFormat),
+				gDevice.LastConnection.Format(helper.SqlDateFormat),
+				gDevice.Status,
+				gDevice.Id,
+				gDevice.Name,
+				gDevice.LoggedinUser,
+				gDevice.DeviceType,
+				gDevice.BatteryLevel,
+				gDevice.IsCharging,
+				gDevice.DeviceGroup,
+				gDevice.DeviceGroupIndex,
+				gDevice.LastModified.Format(helper.SqlDateFormat),
+				gDevice.LastConnection.Format(helper.SqlDateFormat),
+				gDevice.Status,
+			)
 			if err != nil {
 				log.Warnf("Error executing insert statement: %v", err)
 			}
 			changedCount++
+		} else if isOld && models.CompareTimes(gDevice.LastModified, oldDevice.LastModified) && models.HasDeviceChanged(gDevice, &oldDevice) {
+			log.Warnf("Device has changed, but not the last modified")
 		}
 	}
 	log.Infof("Fetched devices (%d have changed)", changedCount)
 
-	charging.EndSync(r.database)
+	history.EndSync(r.database)
 }
 
 func GetValidLoadedDevices(database *database.Database) (devices *[]models.GeneralDevice, err error) {
@@ -126,15 +154,42 @@ func getLoadedDevices(database *database.Database, filter string) (devices *[]mo
 	}
 	var _devices []models.GeneralDevice
 	device := &models.GeneralDevice{}
+	var modified mysql.NullTime
+	var connection mysql.NullTime
 	//noinspection GoUnhandledErrorResult
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&device.Id, &device.Name, &device.LoggedinUser, &device.DeviceType, &device.BatteryLevel, &device.IsCharging, &device.DeviceGroup, &device.DeviceGroupIndex)
+		err := rows.Scan(
+			&device.Id,
+			&device.Name,
+			&device.LoggedinUser,
+			&device.DeviceType,
+			&device.BatteryLevel,
+			&device.IsCharging,
+			&device.DeviceGroup,
+			&device.DeviceGroupIndex,
+			&modified,
+			&connection,
+			&device.Status,
+		)
 		if err != nil {
 			log.Errorf("Database query failed: %v", err)
 			err = &helper.LoadError{Msg: "Database query failed"}
 			return nil, err
 		}
+
+		// Parse the dates
+		if modified.Valid {
+			device.LastModified = modified.Time
+		} else {
+			log.Warnf("Cannot read last modified of device")
+		}
+		if connection.Valid {
+			device.LastConnection = connection.Time
+		} else {
+			log.Warnf("Cannot read last connection of device")
+		}
+
 		_devices = append(_devices, *device)
 	}
 	err = rows.Err()

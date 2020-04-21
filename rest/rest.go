@@ -3,13 +3,13 @@ package rest
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/viktoriaschule/management-server/history"
 	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/viktoriaschule/management-server/auth"
-	"github.com/viktoriaschule/management-server/charging"
 	"github.com/viktoriaschule/management-server/config"
 	"github.com/viktoriaschule/management-server/database"
 	"github.com/viktoriaschule/management-server/log"
@@ -21,7 +21,7 @@ func Serve(config *config.Config, database *database.Database) {
 	root := r.Group("/", basicAuth(config))
 
 	relution.Serve(root, database)
-	charging.Serve(root, database)
+	history.Serve(root, database)
 
 	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {

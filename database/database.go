@@ -39,8 +39,8 @@ func NewDatabase(config *config.Config) *Database {
 
 func (d Database) CreateTables() {
 	statements := []string{
-		"CREATE TABLE IF NOT EXISTS devices (id VARCHAR(255) NOT NULL, name TEXT NOT NULL, loggedin_user TEXT NOT NULL, device_type BOOLEAN NOT NULL, battery_level FLOAT NOT NULL, is_charging BOOLEAN, device_group INT NOT NULL, device_group_index VARCHAR(1) NOT NULL, PRIMARY KEY (id))",
-		"CREATE TABLE IF NOT EXISTS battery (id VARCHAR(255) NOT NULL, level FLOAT NOT NULL, timestamp DATETIME, PRIMARY KEY (id, timestamp))",
+		"CREATE TABLE IF NOT EXISTS devices (id VARCHAR(12) NOT NULL, name TEXT NOT NULL, loggedin_user TEXT NOT NULL, device_type BOOLEAN NOT NULL, battery_level FLOAT NOT NULL, is_charging BOOLEAN, device_group INT NOT NULL, device_group_index VARCHAR(1) NOT NULL, last_modified DATETIME, last_connection DATETIME NOT NULL, status TEXT NOT NULL, PRIMARY KEY (id))",
+		"CREATE TABLE IF NOT EXISTS history (id VARCHAR(12) NOT NULL, level FLOAT NOT NULL, loggedin_user TEXT NOT NULL, status TEXT NOT NULL, last_connection DATETIME NOT NULL, modified DATETIME NOT NULL, timestamp DATETIME NOT NULL, PRIMARY KEY (id, modified))",
 	}
 	for _, statement := range statements {
 		_, err := d.DB.Exec(statement)
