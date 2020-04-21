@@ -44,6 +44,7 @@ func SyncDevice(device *models.GeneralDevice, oldDevice *models.GeneralDevice, i
 
 	charging.SyncDevice(device, oldDevice, isNew)
 
+	// If the entry is not new, return before append
 	if isNotNew {
 		for _, entry := range oldEntries {
 			if models.CompareTimes(entry.Modified, device.LastModified) {
@@ -55,9 +56,7 @@ func SyncDevice(device *models.GeneralDevice, oldDevice *models.GeneralDevice, i
 		}
 	}
 
-	if isNew || !isNotNew {
-		changedSqlHistoryEntries = append(changedSqlHistoryEntries, getSqlHistoryEntry(device))
-	}
+	changedSqlHistoryEntries = append(changedSqlHistoryEntries, getSqlHistoryEntry(device))
 }
 
 // Synchronizes all previous synced devices to the database
@@ -179,7 +178,7 @@ func getHistoryEntriesForDevicesAndTime(database *database.Database, ids *[]stri
 		var timestamp mysql.NullTime
 		var modified mysql.NullTime
 		var connection mysql.NullTime
-		err := rows.Scan(&entry.Id, &entry.Level, &entry.LoggedinUser, &entry.Status, &modified, &connection, &timestamp)
+		err := rows.Scan(&entry.Id, &entry.Level, &entry.LoggedinUser, &entry.Status, &connection, &modified, &timestamp)
 		if err != nil {
 			log.Errorf("Database query failed: ", err)
 			err = &helper.LoadError{Msg: "Database query failed"}
