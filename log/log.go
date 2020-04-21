@@ -82,6 +82,14 @@ func Infof(part string, parts ...interface{}) {
 	}
 }
 
+// Infof print a information with formatting (green)
+func Debugf(part string, parts ...interface{}) {
+	if Level >= Debug {
+		managementPrint()
+		fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.GreenFg).String())
+	}
+}
+
 func managementPrint() {
 	fmt.Print(Au().Bold(Au().Cyan("management: ")).String())
 }

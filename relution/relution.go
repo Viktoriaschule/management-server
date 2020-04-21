@@ -29,7 +29,7 @@ func NewRelution(config *config.Config, database *database.Database) *Relution {
 }
 
 func (r *Relution) FetchDevices() {
-	log.Infof("Fetching devices...")
+	log.Debugf("Fetching devices...")
 	url := fmt.Sprintf("https://%s/relution/api/v1/devices", r.config.Relution.Host)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -137,7 +137,11 @@ func (r *Relution) FetchDevices() {
 			log.Warnf("Device has changed, but not the last modified")
 		}
 	}
-	log.Infof("Fetched devices (%d have changed)", changedCount)
+	if changedCount > 0 {
+		log.Infof("Fetched devices (%d have changed)", changedCount)
+	} else {
+		log.Debugf("Fetched devices (no changes)")
+	}
 
 	history.EndSync(r.database)
 }

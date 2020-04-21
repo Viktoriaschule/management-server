@@ -83,30 +83,33 @@ func getSqlHistoryEntry(device *models.GeneralDevice) string {
 
 // Adds the given sql history values to the database
 func addHistoryEntries(database *database.Database, entries *[]string) {
-	log.Infof("Add %d history entries...", len(*entries))
 
-	if len(changedSqlHistoryEntries) > 0 {
+	if len(*entries) > 0 {
+		log.Infof("Add %d history entries...", len(*entries))
+
 		_, err := database.DB.Exec("INSERT INTO history VALUES " + strings.Join(*entries, ", "))
 
 		if err != nil {
 			log.Warnf("Error during adding a new history entry: %v", err)
 		}
 
-		log.Infof("Added history entries...")
+		log.Debugf("Added history entries...")
+	} else {
+		log.Debugf("Add 0 history entries...")
 	}
 }
 
 // Removes all history entries older than the max store duration
 func removeOldHistoryEntries(database *database.Database) {
 	oldestDate := time.Now().Add(-maxStoreDuration).Format(helper.SqlDateFormat)
-	log.Infof("Remove history entries older than %s...", oldestDate)
+	log.Debugf("Remove history entries older than %s...", oldestDate)
 	_, err := database.DB.Exec("DELETE FROM history WHERE timestamp < ?", oldestDate)
 
 	if err != nil {
 		log.Warnf("Error deleting old battery level entries: %v", err)
 	}
 
-	log.Infof("Removed old devices...")
+	log.Debugf("Removed old devices...")
 }
 
 // Returns all battery entries in the last max loading duration sorted by the date
@@ -216,6 +219,6 @@ func getHistoryEntriesForDevicesAndTime(database *database.Database, ids *[]stri
 		err = &helper.LoadError{Msg: "Database query failed"}
 		return nil, err
 	}
-	log.Infof("Loaded %d history entries", count)
+	log.Debugf("Loaded %d history entries", count)
 	return entries, err
 }
