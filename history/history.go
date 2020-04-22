@@ -70,12 +70,11 @@ func EndSync(database *database.Database) {
 func getSqlHistoryEntry(device *models.GeneralDevice) string {
 	entry := models.DeviceToHistoryEntry(device)
 
-	return fmt.Sprintf(`("%s", "%d", "%s", "%s", "%s", "%s", "%s")`,
+	return fmt.Sprintf(`("%s", "%d", "%s", "%s", "%s", "%s")`,
 		entry.Id,
 		entry.Level,
 		entry.LoggedinUser,
 		entry.Status,
-		entry.LastConnection.Format(helper.SqlDateFormat),
 		entry.Modified.Format(helper.SqlDateFormat),
 		entry.Timestamp.Format(helper.SqlDateFormat),
 	)
@@ -180,8 +179,7 @@ func getHistoryEntriesForDevicesAndTime(database *database.Database, ids *[]stri
 		count++
 		var timestamp mysql.NullTime
 		var modified mysql.NullTime
-		var connection mysql.NullTime
-		err := rows.Scan(&entry.Id, &entry.Level, &entry.LoggedinUser, &entry.Status, &connection, &modified, &timestamp)
+		err := rows.Scan(&entry.Id, &entry.Level, &entry.LoggedinUser, &entry.Status, &modified, &timestamp)
 		if err != nil {
 			log.Errorf("Database query failed: ", err)
 			err = &helper.LoadError{Msg: "Database query failed"}
@@ -198,11 +196,6 @@ func getHistoryEntriesForDevicesAndTime(database *database.Database, ids *[]stri
 			entry.Modified = modified.Time
 		} else {
 			log.Warnf("Cannot read last modified of history entry")
-		}
-		if connection.Valid {
-			entry.LastConnection = connection.Time
-		} else {
-			log.Warnf("Cannot read last connection of history entry")
 		}
 
 		_, exists := entries[entry.Id]

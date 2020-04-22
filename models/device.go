@@ -211,6 +211,7 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 	if username == "AACHEN-VSA Device User" {
 		username = ""
 	}
+
 	return &GeneralDevice{
 		Id:               strings.Replace(device.Details.WifiMAC, ":", "", 5),
 		Name:             strings.ToLower(device.Name),
@@ -228,6 +229,10 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 
 func HasDeviceChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
 	return HasObjectChanged(*oldDevice, *newDevice)
+}
+
+func HasDeviceTmpAttributesChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
+	return oldDevice.IsCharging != newDevice.IsCharging || !CompareTimes(oldDevice.LastConnection, newDevice.LastConnection)
 }
 
 func HasObjectChanged(o1 interface{}, o2 interface{}) bool {

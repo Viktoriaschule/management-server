@@ -103,7 +103,7 @@ func (r *Relution) FetchDevices() {
 
 		// Add or change device entry
 		datesAreEquals := models.CompareTimes(gDevice.LastModified, oldDevice.LastModified)
-		if !isOld || models.TimesIsAfter(gDevice.LastModified, oldDevice.LastModified) || (datesAreEquals && gDevice.IsCharging != oldDevice.IsCharging) {
+		if !isOld || models.TimesIsAfter(gDevice.LastModified, oldDevice.LastModified) || (datesAreEquals && models.HasDeviceTmpAttributesChanged(gDevice, &oldDevice)) {
 			oldDevices[gDevice.Id] = *gDevice
 			_, err = stmtIns.Exec(
 				gDevice.Id,
