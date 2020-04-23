@@ -114,8 +114,8 @@ func (r *Relution) FetchDevices() {
 				gDevice.IsCharging,
 				gDevice.DeviceGroup,
 				gDevice.DeviceGroupIndex,
-				gDevice.LastModified.Format(helper.SqlDateFormat),
-				gDevice.LastConnection.Format(helper.SqlDateFormat),
+				gDevice.LastModified.UTC().Format(helper.SqlDateFormat),
+				gDevice.LastConnection.UTC().Format(helper.SqlDateFormat),
 				gDevice.Status,
 				gDevice.Id,
 				gDevice.Name,
@@ -125,8 +125,8 @@ func (r *Relution) FetchDevices() {
 				gDevice.IsCharging,
 				gDevice.DeviceGroup,
 				gDevice.DeviceGroupIndex,
-				gDevice.LastModified.Format(helper.SqlDateFormat),
-				gDevice.LastConnection.Format(helper.SqlDateFormat),
+				gDevice.LastModified.UTC().Format(helper.SqlDateFormat),
+				gDevice.LastConnection.UTC().Format(helper.SqlDateFormat),
 				gDevice.Status,
 			)
 			if err != nil {

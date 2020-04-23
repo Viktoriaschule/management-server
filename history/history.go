@@ -75,8 +75,8 @@ func getSqlHistoryEntry(device *models.GeneralDevice) string {
 		entry.Level,
 		entry.LoggedinUser,
 		entry.Status,
-		entry.Modified.Format(helper.SqlDateFormat),
-		entry.Timestamp.Format(helper.SqlDateFormat),
+		entry.Modified.UTC().Format(helper.SqlDateFormat),
+		entry.Timestamp.UTC().Format(helper.SqlDateFormat),
 	)
 }
 

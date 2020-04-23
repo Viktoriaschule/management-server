@@ -221,19 +221,14 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 		DeviceGroup:      group,
 		DeviceGroupIndex: groupIndex,
 		IsCharging:       false,
-		LastModified:     parseUtcUnixTime(int64(device.ModificationDate)).UTC(),
-		LastConnection:   parseUtcUnixTime(int64(device.LastConnectionDate)).UTC(),
+		LastModified:     parseUtcUnixTime(int64(device.ModificationDate)),
+		LastConnection:   parseUtcUnixTime(int64(device.LastConnectionDate)),
 		Status:           device.Status,
 	}, nil
 }
 
 func parseUtcUnixTime(timestamp int64) time.Time {
-	date := time.Unix(0, timestamp*int64(time.Millisecond))
-
-	// The timestamp is in utc, but parsed as local, so add the timezone offset and the time is correct
-	_, offset := date.Zone()
-	parsedDate := date.Add(time.Second * time.Duration(offset))
-	return parsedDate
+	return time.Unix(0, timestamp*int64(time.Millisecond))
 }
 
 func HasDeviceChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
