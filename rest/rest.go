@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/viktoriaschule/management-server/history"
+	"github.com/viktoriaschule/management-server/reservation"
 	"os"
 	"strings"
 
@@ -25,8 +26,9 @@ func Serve(config *config.Config, database *database.Database) {
 
 	root := r.Group("/", basicAuth(config))
 
-	relution.Serve(root, database)
-	history.Serve(root, database)
+	relution.Serve(root.Group("/ipad_list"), database)
+	history.Serve(root.Group("/history"), database)
+	reservation.Serve(root.Group("/reservations"), database)
 
 	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
