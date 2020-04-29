@@ -1,20 +1,25 @@
 package models
 
 import (
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type GeneralDevice struct {
-	Id               string `json:"id"`
-	Name             string `json:"name"`
-	LoggedinUser     string `json:"loggedin_user"`
-	DeviceType       int64  `json:"device_type"`
-	BatteryLevel     int64  `json:"battery_level"`
-	IsCharging       bool   `json:"is_charging"`
-	DeviceGroup      int64  `json:"device_group"`
-	DeviceGroupIndex string `json:"device_group_index"`
+	Id               string    `json:"id"`
+	Name             string    `json:"name"`
+	LoggedinUser     string    `json:"loggedin_user"`
+	DeviceType       int64     `json:"device_type"`
+	BatteryLevel     int64     `json:"battery_level"`
+	IsCharging       bool      `json:"is_charging"`
+	DeviceGroup      int64     `json:"device_group"`
+	DeviceGroupIndex string    `json:"device_group_index"`
+	LastModified     time.Time `json:"last_modified"`
+	LastConnection   time.Time `json:"last_connection"`
+	Status           string    `json:"status"`
 }
 
 type RelutionDevice struct {
@@ -206,8 +211,9 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 	if username == "AACHEN-VSA Device User" {
 		username = ""
 	}
+
 	return &GeneralDevice{
-		Id:               strings.ToLower(device.Uuid),
+		Id:               strings.Replace(device.Details.WifiMAC, ":", "", 5),
 		Name:             strings.ToLower(device.Name),
 		LoggedinUser:     username,
 		DeviceType:       deviceType,
@@ -215,15 +221,57 @@ func RelutionDeviceToGeneralDevice(device RelutionDevice) (*GeneralDevice, error
 		DeviceGroup:      group,
 		DeviceGroupIndex: groupIndex,
 		IsCharging:       false,
+		LastModified:     parseUtcUnixTime(int64(device.ModificationDate)),
+		LastConnection:   parseUtcUnixTime(int64(device.LastConnectionDate)),
+		Status:           device.Status,
 	}, nil
 }
 
+func parseUtcUnixTime(timestamp int64) time.Time {
+	return time.Unix(0, timestamp*int64(time.Millisecond))
+}
+
 func HasDeviceChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
-	return oldDevice.BatteryLevel != newDevice.BatteryLevel ||
-		oldDevice.IsCharging != newDevice.IsCharging ||
-		oldDevice.LoggedinUser != newDevice.LoggedinUser ||
-		oldDevice.DeviceGroup != newDevice.DeviceGroup ||
-		oldDevice.DeviceGroupIndex != newDevice.DeviceGroupIndex ||
-		oldDevice.Name != newDevice.Name ||
-		oldDevice.DeviceType != newDevice.DeviceType
+	return HasObjectChanged(*oldDevice, *newDevice)
+}
+
+func HasDeviceTmpAttributesChanged(oldDevice *GeneralDevice, newDevice *GeneralDevice) bool {
+	return oldDevice.IsCharging != newDevice.IsCharging || !CompareTimes(oldDevice.LastConnection, newDevice.LastConnection)
+}
+
+func HasObjectChanged(o1 interface{}, o2 interface{}) bool {
+	v1 := reflect.ValueOf(o1)
+	v2 := reflect.ValueOf(o2)
+
+	for i := 0; i < v1.NumField(); i++ {
+		value1 := v1.Field(i).Interface()
+		value2 := v2.Field(i).Interface()
+
+		if v1.Type().Field(i).Name == "Timestamp" {
+			continue
+		}
+
+		// If the attribute is a date, compare the dates
+		if time1, ok := value1.(time.Time); ok {
+			time2 := value2.(time.Time)
+			if !CompareTimes(time1, time2) {
+				return true
+			}
+		} else if value1 != value2 {
+			return true
+		}
+	}
+	return false
+}
+
+func TimesIsAfter(t1 time.Time, t2 time.Time) bool {
+	t1 = t1.Truncate(time.Second)
+	t2 = t2.Truncate(time.Second)
+	return t1.After(t2)
+}
+
+func CompareTimes(t1 time.Time, t2 time.Time) bool {
+	t1 = t1.Truncate(time.Second)
+	t2 = t2.Truncate(time.Second)
+	return t1.Equal(t2)
 }

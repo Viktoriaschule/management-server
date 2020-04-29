@@ -6,7 +6,35 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-// Colorize chnage the logger to support colors printing.
+const (
+	Debug = 3
+	Info  = 2
+	Warn  = 1
+	Error = 0
+)
+
+var Level = Debug
+
+func SetLogLevel(logLevelName string) {
+	switch logLevelName {
+	case "debug":
+		Level = Debug
+		break
+	case "info":
+		Level = Info
+		break
+	case "warn":
+		Level = Warn
+		break
+	case "error":
+		Level = Error
+		break
+	default:
+		Level = Debug
+	}
+}
+
+// Colorize change the logger to support colors printing.
 func Colorize() {
 	au = aurora.NewAurora(true)
 }
@@ -24,26 +52,42 @@ func Au() aurora.Aurora {
 
 // Printf print a message with formatting
 func Printf(part string, parts ...interface{}) {
-	managementPrint()
-	fmt.Println(fmt.Sprintf(part, parts...))
+	if Level >= Debug {
+		managementPrint()
+		fmt.Println(fmt.Sprintf(part, parts...))
+	}
 }
 
 // Errorf print a error with formatting (red)
 func Errorf(part string, parts ...interface{}) {
-	managementPrint()
-	fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.RedFg).String())
+	if Level >= Error {
+		managementPrint()
+		fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.RedFg).String())
+	}
 }
 
 // Warnf print a warning with formatting (yellow)
 func Warnf(part string, parts ...interface{}) {
-	managementPrint()
-	fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.YellowFg).String())
+	if Level >= Warn {
+		managementPrint()
+		fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.YellowFg).String())
+	}
 }
 
 // Infof print a information with formatting (green)
 func Infof(part string, parts ...interface{}) {
-	managementPrint()
-	fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.GreenFg).String())
+	if Level >= Info {
+		managementPrint()
+		fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.GreenFg).String())
+	}
+}
+
+// Infof print a information with formatting (green)
+func Debugf(part string, parts ...interface{}) {
+	if Level >= Debug {
+		managementPrint()
+		fmt.Println(Au().Colorize(fmt.Sprintf(fmt.Sprintf("%v", part), parts...), aurora.GreenFg).String())
+	}
 }
 
 func managementPrint() {

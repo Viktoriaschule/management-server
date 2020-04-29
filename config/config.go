@@ -24,7 +24,8 @@ type Config struct {
 	Ldap struct {
 		Url string
 	}
-	Port int
+	Port     int
+	LogLevel string
 }
 
 var config = Config{}

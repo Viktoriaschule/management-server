@@ -44,6 +44,8 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		c := config.GetConfig()
 
+		log.SetLogLevel(c.LogLevel)
+
 		db := database.NewDatabase(c)
 		db.CreateTables()
 
