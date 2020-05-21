@@ -11,9 +11,11 @@ type Reservation struct {
 	Participant string    `json:"participant"`
 	Date        time.Time `json:"date"`
 	Priority    Priority  `json:"priority"`
-	IPadGroup   int       `json:"iPadGroup"`
+	IPadGroups  []int     `json:"iPadGroups"`
 	Created     time.Time `json:"created"`
 	Modified    time.Time `json:"modified"`
+	// Whether it is important that it is exactly this iPadGroup or not
+	IsPinned bool `json:"isPinned"`
 }
 
 type Group struct {
@@ -31,4 +33,20 @@ type Priority struct {
 type ReservationIDs struct {
 	Reservations int `json:"reservations"`
 	Groups       int `json:"groups"`
+}
+
+type ReservationUnit struct {
+	Date      time.Time `json:"date"`
+	Unit      int       `json:"unit"`
+	IPadGroup int       `json:"iPadGroup"`
+	// Whether it is important that it is exactly this iPadGroup or not
+	IsPinned      bool `json:"isPinned"`
+	ReservationID int  `json:"reservationID"`
+}
+
+type FreeIPadGroups struct {
+	MaxCount       int   `json:"maxCount"`
+	FreeGroups     []int `json:"freeGroups"`
+	UnpinnedGroups []int `json:"unpinnedGroups"`
+	ReservedGroups []int `json:"reservedGroups"`
 }

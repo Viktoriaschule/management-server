@@ -114,8 +114,8 @@ func (r *Relution) FetchDevices() {
 				gDevice.IsCharging,
 				gDevice.DeviceGroup,
 				gDevice.DeviceGroupIndex,
-				gDevice.LastModified.UTC().Format(helper.SqlDateFormat),
-				gDevice.LastConnection.UTC().Format(helper.SqlDateFormat),
+				gDevice.LastModified.UTC().Format(helper.SqlDateTimeFormat),
+				gDevice.LastConnection.UTC().Format(helper.SqlDateTimeFormat),
 				gDevice.Status,
 				gDevice.Id,
 				gDevice.Name,
@@ -125,8 +125,8 @@ func (r *Relution) FetchDevices() {
 				gDevice.IsCharging,
 				gDevice.DeviceGroup,
 				gDevice.DeviceGroupIndex,
-				gDevice.LastModified.UTC().Format(helper.SqlDateFormat),
-				gDevice.LastConnection.UTC().Format(helper.SqlDateFormat),
+				gDevice.LastModified.UTC().Format(helper.SqlDateTimeFormat),
+				gDevice.LastConnection.UTC().Format(helper.SqlDateTimeFormat),
 				gDevice.Status,
 			)
 			if err != nil {
@@ -148,6 +148,26 @@ func (r *Relution) FetchDevices() {
 
 func GetValidLoadedDevices(database *database.Database) (devices *[]models.GeneralDevice, err error) {
 	return getLoadedDevices(database, "WHERE device_group != 0 OR device_type = 1")
+}
+
+func GetAllIPadGroups(database *database.Database) (iPadGroups *[]int64, err error) {
+	devices, _err := GetValidLoadedDevices(database)
+
+	if _err != nil {
+		return nil, _err
+	}
+
+	allGroups := make(map[int64]int)
+	var result []int64
+
+	for _, device := range *devices {
+		if _, exists := allGroups[device.DeviceGroup]; !exists {
+			result = append(result, device.DeviceGroup)
+			allGroups[device.DeviceGroup] = 0
+		}
+	}
+
+	return &result, nil
 }
 
 func getLoadedDevices(database *database.Database, filter string) (devices *[]models.GeneralDevice, err error) {
