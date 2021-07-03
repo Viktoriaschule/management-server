@@ -6,7 +6,7 @@ import (
 )
 
 func Serve(root *gin.RouterGroup, database *database.Database) {
-	root.POST("/history", func(c *gin.Context) {
+	root.POST("/", func(c *gin.Context) {
 		request := Request{}
 
 		if err := c.ShouldBindJSON(&request); err == nil {

@@ -75,8 +75,8 @@ func getSqlHistoryEntry(device *models.GeneralDevice) string {
 		entry.Level,
 		entry.LoggedinUser,
 		entry.Status,
-		entry.Modified.UTC().Format(helper.SqlDateFormat),
-		entry.Timestamp.UTC().Format(helper.SqlDateFormat),
+		entry.Modified.UTC().Format(helper.SqlDateTimeFormat),
+		entry.Timestamp.UTC().Format(helper.SqlDateTimeFormat),
 	)
 }
 
@@ -100,7 +100,7 @@ func addHistoryEntries(database *database.Database, entries *[]string) {
 
 // Removes all history entries older than the max store duration
 func removeOldHistoryEntries(database *database.Database) {
-	oldestDate := time.Now().Add(-maxStoreDuration).Format(helper.SqlDateFormat)
+	oldestDate := time.Now().Add(-maxStoreDuration).Format(helper.SqlDateTimeFormat)
 	log.Debugf("Remove history entries older than %s...", oldestDate)
 	_, err := database.DB.Exec("DELETE FROM history WHERE timestamp < ?", oldestDate)
 
@@ -113,13 +113,13 @@ func removeOldHistoryEntries(database *database.Database) {
 
 // Returns all battery entries in the last max loading duration sorted by the date
 func getHistoryEntriesInDuration(database *database.Database, duration time.Duration) (entries map[string][]models.HistoryEntry, err error) {
-	oldestDate := time.Now().Add(duration).Format(helper.SqlDateFormat)
+	oldestDate := time.Now().Add(duration).Format(helper.SqlDateTimeFormat)
 	return getHistoryEntriesForDevicesAndTime(database, nil, &oldestDate)
 }
 
 // Returns all battery entries for the given devices
 func GetHistoryEntriesForDevices(database *database.Database, ids []string, date time.Time) (entries map[string][]models.HistoryEntry, err error) {
-	oldestDate := date.Format(helper.SqlDateFormat)
+	oldestDate := date.Format(helper.SqlDateTimeFormat)
 	return getHistoryEntriesForDevicesAndTime(database, &ids, &oldestDate)
 }
 

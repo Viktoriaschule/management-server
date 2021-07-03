@@ -1,11 +1,11 @@
 package rest
 
 import (
-	"encoding/base64"
 	"fmt"
+	"github.com/viktoriaschule/management-server/helper"
 	"github.com/viktoriaschule/management-server/history"
+	"github.com/viktoriaschule/management-server/reservation"
 	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,8 +25,9 @@ func Serve(config *config.Config, database *database.Database) {
 
 	root := r.Group("/", basicAuth(config))
 
-	relution.Serve(root, database)
-	history.Serve(root, database)
+	relution.Serve(root.Group("/ipad_list"), database)
+	history.Serve(root.Group("/history"), database)
+	reservation.Serve(root.Group("/reservations"), database)
 
 	err := r.Run(fmt.Sprintf(":%d", config.Port))
 	if err != nil {
@@ -37,17 +38,9 @@ func Serve(config *config.Config, database *database.Database) {
 
 func basicAuth(config *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
+		username, password, status := helper.GetAuth(c.Request)
 
-		if len(auth) != 2 || auth[0] != "Basic" {
-			c.Writer.Header().Set("WWW-Authenticate", "Basic")
-			respondWithError(401, "Unauthorized", c)
-			return
-		}
-		payload, _ := base64.StdEncoding.DecodeString(auth[1])
-		pair := strings.SplitN(string(payload), ":", 2)
-
-		if len(pair) != 2 || !authenticateUser(pair[0], pair[1], config) {
+		if status == 401 || !authenticateUser(username, password, config) {
 			c.Writer.Header().Set("WWW-Authenticate", "Basic")
 			respondWithError(401, "Unauthorized", c)
 			return
